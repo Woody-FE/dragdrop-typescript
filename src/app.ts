@@ -1,3 +1,82 @@
+// Vaildate
+type Validatable = {
+	value: string | number;
+	required?: boolean;
+	minLength?: number;
+	maxLength?: number;
+	min?: number;
+	max?: number;
+};
+
+function validate(validatableInput: Validatable) {
+	let isValid = true;
+	if (validatableInput.required) {
+		isValid = isValid && validatableInput.value.toString().trim().length !== 0;
+	}
+	if (
+		validatableInput.minLength != undefined &&
+		typeof validatableInput.value === 'string'
+	) {
+		isValid =
+			isValid && validatableInput.value.length > validatableInput.minLength;
+	}
+	if (
+		validatableInput.maxLength != undefined &&
+		typeof validatableInput.value === 'string'
+	) {
+		isValid =
+			isValid && validatableInput.value.length < validatableInput.maxLength;
+	}
+	if (
+		validatableInput.min != undefined &&
+		typeof validatableInput.value === 'number'
+	) {
+		isValid = isValid && validatableInput.value > validatableInput.min;
+	}
+	if (
+		validatableInput.max != undefined &&
+		typeof validatableInput.value === 'number'
+	) {
+		isValid = isValid && validatableInput.value < validatableInput.max;
+	}
+	return isValid;
+}
+
+// ProjectList Class
+class ProjectList {
+	templateElement: HTMLTemplateElement;
+	hostElement: HTMLDivElement;
+	element: HTMLElement;
+
+	constructor(private type: 'active' | 'finished') {
+		this.templateElement = document.getElementById(
+			'project-list'
+		)! as HTMLTemplateElement;
+		this.hostElement = document.getElementById('app')! as HTMLDivElement;
+
+		const importedNode = document.importNode(
+			this.templateElement.content,
+			true
+		);
+		this.element = importedNode.firstElementChild as HTMLElement;
+		this.element.id = `${this.type}-projects`;
+		this.attach();
+		this.renderContent();
+	}
+
+	private attach() {
+		this.hostElement.insertAdjacentElement('beforeend', this.element);
+	}
+
+	private renderContent() {
+		const listId = `${this.type}-projects-list`;
+		this.element.querySelector('ul')!.id = listId;
+		this.element.querySelector('h2')!.textContent =
+			this.type.toUpperCase() + ' PROJECTS';
+	}
+}
+
+// ProjectInput Class
 class ProjectInput {
 	templateElement: HTMLTemplateElement;
 	hostElement: HTMLDivElement;
@@ -39,9 +118,9 @@ class ProjectInput {
 		const people = this.peopleInputElement.value;
 
 		if (
-			title.trim().length === 0 ||
-			description.trim().length === 0 ||
-			people.trim().length === 0
+			!validate({ value: title, required: true }) ||
+			!validate({ value: description, required: true, minLength: 5 }) ||
+			!validate({ value: +people, required: true, min: 1, max: 5 })
 		) {
 			alert('올바르지않은 입력값입니다. 다시 한번 확인해주세요');
 			return;
@@ -75,7 +154,6 @@ class ProjectInput {
 	// }
 
 	private configure() {
-		console.log('config', this);
 		// this.submitHandler에서의 this가 this.element인 formElement와 같다.
 		// 즉, submitHandler는 formElement에 의해서 실행이 되었음
 		this.element.addEventListener('submit', this.submitHandler);
@@ -87,3 +165,5 @@ class ProjectInput {
 }
 
 const prjInput = new ProjectInput();
+const activeList = new ProjectList('active');
+const finishedList = new ProjectList('finished');
