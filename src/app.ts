@@ -1,13 +1,23 @@
-// Project State Management
-type Project = {
-	id: string;
-	title: string;
-	description: string;
-	people: number;
-};
+enum ProjectStatus {
+	Active,
+	Finished,
+}
 
+class Project {
+	constructor(
+		public id: string,
+		public title: string,
+		public description: string,
+		public people: number,
+		public status: ProjectStatus
+	) {}
+}
+
+type Listener = (items: Project[]) => void;
+
+// Project State Management
 class ProjectState {
-	private listeners: Function[] = [];
+	private listeners: Listener[] = [];
 	private projects: Project[] = [];
 	private static instance: ProjectState;
 
@@ -21,17 +31,18 @@ class ProjectState {
 		return this.instance;
 	}
 
-	addListener(listenerFn: Function) {
+	addListener(listenerFn: Listener) {
 		this.listeners.push(listenerFn);
 	}
 
 	addProject(title: string, description: string, people: number) {
-		const newProject = {
-			id: Math.random().toString(),
+		const newProject = new Project(
+			Math.random().toString(),
 			title,
 			description,
 			people,
-		};
+			ProjectStatus.Active
+		);
 		this.projects.push(newProject);
 		for (const listenerFn of this.listeners) {
 			listenerFn([...this.projects]);
@@ -107,7 +118,14 @@ class ProjectList {
 		this.element.id = `${this.type}-projects`;
 
 		projectState.addListener((projects: Project[]) => {
-			this.assignedProjects = projects;
+			// 상태에 맞도록 추가
+			const relevantProjects = projects.filter((project) => {
+				if (this.type === 'active') {
+					return project.status === ProjectStatus.Active;
+				}
+				return project.status === ProjectStatus.Finished;
+			});
+			this.assignedProjects = relevantProjects;
 			this.renderProjects();
 		});
 
@@ -118,6 +136,7 @@ class ProjectList {
 	private renderProjects() {
 		const listId = `${this.type}-projects-list`;
 		const listEl = document.getElementById(listId)!;
+		listEl.innerHTML = '';
 		for (const prjItem of this.assignedProjects) {
 			const listItem = document.createElement('li');
 			listItem.textContent = prjItem.title;
