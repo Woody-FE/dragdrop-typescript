@@ -1,3 +1,4 @@
+// 이넘을 통해서 스테이터스 관리
 enum ProjectStatus {
 	Active,
 	Finished,
