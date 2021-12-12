@@ -6,8 +6,8 @@ interface Draggable {
 
 type DragTarget = {
 	dragOverHandler: (event: DragEvent) => void;
-	dragHandler: (event: DragEvent) => void;
 	dragLeaveHandler: (event: DragEvent) => void;
+	dropHandler: (event: DragEvent) => void;
 };
 
 // 이넘을 통해서 스테이터스 관리
@@ -62,6 +62,17 @@ class ProjectState extends State<Project> {
 			ProjectStatus.Active
 		);
 		this.projects.push(newProject);
+		this.updateListener();
+	}
+	moveProject(projectId: string, newStatus: ProjectStatus) {
+		const project = this.projects.find((prj) => prj.id === projectId);
+		if (project && project.status !== newStatus) {
+			project.status = newStatus;
+			this.updateListener();
+		}
+	}
+
+	private updateListener() {
 		for (const listenerFn of this.listeners) {
 			listenerFn([...this.projects]);
 		}
@@ -175,9 +186,11 @@ class ProjectItem
 		this.renderContent();
 	}
 
-	dragStartHandler(event: DragEvent) {
-		console.log(event);
-	}
+	dragStartHandler = (event: DragEvent) => {
+		console.log(this.project.id);
+		event.dataTransfer!.setData('text/plain', this.project.id);
+		event.dataTransfer!.effectAllowed = 'move';
+	};
 
 	dragEndHandler = (_: DragEvent) => {
 		console.log('End');
@@ -209,10 +222,19 @@ class ProjectList
 		this.renderContent();
 	}
 
-	dragHandler = (_: DragEvent) => {};
-	dragOverHandler = (_: DragEvent) => {
-		const listEl = this.element.querySelector('ul')!;
-		listEl.classList.add('droppable');
+	dropHandler = (event: DragEvent) => {
+		const prjId = event.dataTransfer!.getData('text/plain');
+		projectState.moveProject(
+			prjId,
+			this.type === 'active' ? ProjectStatus.Active : ProjectStatus.Finished
+		);
+	};
+	dragOverHandler = (event: DragEvent) => {
+		if (event.dataTransfer && event.dataTransfer.types[0] === 'text/plain') {
+			event.preventDefault();
+			const listEl = this.element.querySelector('ul')!;
+			listEl.classList.add('droppable');
+		}
 	};
 	dragLeaveHandler = (_: DragEvent) => {
 		const listEl = this.element.querySelector('ul')!;
@@ -221,8 +243,8 @@ class ProjectList
 
 	configure() {
 		this.element.addEventListener('dragover', this.dragOverHandler);
-		this.element.addEventListener('drag', this.dragHandler);
 		this.element.addEventListener('dragleave', this.dragLeaveHandler);
+		this.element.addEventListener('drop', this.dropHandler);
 		projectState.addListener((projects: Project[]) => {
 			// 상태에 맞도록 추가
 			const relevantProjects = projects.filter((project) => {
