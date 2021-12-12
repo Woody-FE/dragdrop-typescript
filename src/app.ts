@@ -1,3 +1,15 @@
+// Drag & Drop Type
+interface Draggable {
+	dragStartHandler(event: DragEvent): void;
+	dragEndHandler(event: DragEvent): void;
+}
+
+type DragTarget = {
+	dragOverHandler: (event: DragEvent) => void;
+	dragHandler: (event: DragEvent) => void;
+	dragLeaveHandler: (event: DragEvent) => void;
+};
+
 // 이넘을 통해서 스테이터스 관리
 enum ProjectStatus {
 	Active,
@@ -142,7 +154,9 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
 	abstract renderContent(): void;
 }
 
-class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
+class ProjectItem
+	extends Component<HTMLUListElement, HTMLLIElement>
+	implements Draggable {
 	private project: Project;
 
 	get persons() {
@@ -161,7 +175,18 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
 		this.renderContent();
 	}
 
-	configure() {}
+	dragStartHandler(event: DragEvent) {
+		console.log(event);
+	}
+
+	dragEndHandler = (_: DragEvent) => {
+		console.log('End');
+	};
+
+	configure() {
+		this.element.addEventListener('dragstart', this.dragStartHandler);
+		this.element.addEventListener('dragend', this.dragEndHandler);
+	}
 
 	renderContent() {
 		this.element.querySelector('h2')!.textContent = this.project.title;
@@ -171,7 +196,9 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
 }
 
 // ProjectList Class
-class ProjectList extends Component<HTMLDivElement, HTMLElement> {
+class ProjectList
+	extends Component<HTMLDivElement, HTMLElement>
+	implements DragTarget {
 	assignedProjects: Project[];
 
 	constructor(private type: 'active' | 'finished') {
@@ -182,7 +209,20 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
 		this.renderContent();
 	}
 
+	dragHandler = (_: DragEvent) => {};
+	dragOverHandler = (_: DragEvent) => {
+		const listEl = this.element.querySelector('ul')!;
+		listEl.classList.add('droppable');
+	};
+	dragLeaveHandler = (_: DragEvent) => {
+		const listEl = this.element.querySelector('ul')!;
+		listEl.classList.remove('droppable');
+	};
+
 	configure() {
+		this.element.addEventListener('dragover', this.dragOverHandler);
+		this.element.addEventListener('drag', this.dragHandler);
+		this.element.addEventListener('dragleave', this.dragLeaveHandler);
 		projectState.addListener((projects: Project[]) => {
 			// 상태에 맞도록 추가
 			const relevantProjects = projects.filter((project) => {
@@ -214,7 +254,7 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
 }
 
 // ProjectInput Class
-class ProjectInput extends Component<HTMLDivElement, HTMLElement> {
+class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
 	titleInputElement: HTMLInputElement;
 	descriptionInputElement: HTMLInputElement;
 	peopleInputElement: HTMLInputElement;
